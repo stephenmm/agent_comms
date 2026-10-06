@@ -22,13 +22,15 @@ definition of done are in [PLAN.md](PLAN.md).
 2. The owner pastes the printed start prompt into the **secondary** agent. That paste is the only human
    step.
 3. Both agents alternate `recv` → act → `send` until one sends `--end`.
+4. The owner can halt both agents at any time with `python agent_channel.py stop <channel-dir>`; each
+   sees `closed` on its next command, a blocked `recv` within 5 s.
 
 Every command prints one JSON object with a `status` of `message`, `waiting`, `closed` or `error`
 (exit codes 0, 2, 3, 4).
 
 ## Tests
 ```bash
-py -3.12 -m unittest test_agent_channel -v   # 24 black-box tests, about 1 min
+py -3.12 -m unittest test_agent_channel -v   # 26 black-box tests, about 1 min
 py -3.12 mutation_check.py                   # removes each guard in turn; every one must turn the suite red (about 4 min)
 py -3.12 -m mypy --strict agent_channel.py test_agent_channel.py mutation_check.py
 ```

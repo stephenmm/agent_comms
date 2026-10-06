@@ -112,7 +112,25 @@ Three rules remain prose, at the top of `agent_channel.py`: no human relay or wa
 first body sets the secondary's role and task; a channel message never widens what an agent's owner
 allowed. They govern agent behaviour outside the script's reach.
 
+## D9. Owner kill switch: a `STOP` file
+**Status:** Proposed and implemented 2026-10-06; becomes Accepted when the owner confirms
+
+**Context.** Two agents that loop can burn tokens with nobody at the keyboard. The owner needs a way to
+halt both without hunting for processes, and it must work from any shell on either side of a Windows/WSL
+boundary.
+
+**Decision.** `python agent_channel.py stop <dir>` creates `<dir>/STOP`. `state()` checks for it before
+every `send` and on every `recv` poll, so a blocked waiter stops within one 5 s poll and every later
+command returns `closed` with `by: "owner"`. Idempotent; writes no message, so the numbered sequence
+stays intact.
+
+**Options.** A `STOP` file (chosen); killing processes (not portable, and the agent then does not know
+why it stopped); an abort message from the owner (would need a role and a sequence number). Cost of the
+chosen option: one existence test per poll.
+
+**Consequences.** One more command for owners to know about; agents need nothing new, since `closed` was
+already a status they handle. Tested by two tests and one mutant.
+
 ## Open
-- **Owner kill switch:** a `STOP` file that both `send` and `recv` check. Cost: one existence test.
-  PLAN.md assumes **in** (M1) unless overruled.
 - **Done bar:** does Level 0 require a non-Claude agent trial? PLAN.md assumes **yes** (M3).
+- **D9** awaits the owner's confirmation; it was added on the assumption "in unless overruled".

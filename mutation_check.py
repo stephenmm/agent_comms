@@ -30,6 +30,7 @@ MUTANTS: dict[str, tuple[str, str]] = {
     "selftest silence": ("time.sleep(args.seconds)", "pass"),
     "empty-channel timeout": ("if n else d.stat().st_mtime", "if n else started"),
     "recv waits for the peer": ("if n and author(n - 1) != role:", "if n:"),
+    "owner kill switch": ("if (d / STOP).exists():", "if False:"),
 }
 
 

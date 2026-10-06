@@ -7,11 +7,12 @@ This file IS the protocol. Read it, then use only these commands (never write ch
     selftest                    both: silent for 120 s, then prints "pass"
     send <dir> <role>           body from stdin or --body-file; --end closes the channel
     recv <dir> <role>           block until the peer's next message; prints it as JSON
+    stop <dir>                  owner only: halt the channel; both agents get "closed" on their next command
 
 Every command prints one JSON object with a "status":
     "message" (exit 0)  the peer's message is in "body"; act on it, then `send`
     "waiting" (exit 2)  nothing yet; run the same `recv` again, without asking your owner
-    "closed"  (exit 3)  the channel is over; "body" holds any final text; stop
+    "closed"  (exit 3)  the channel is over: peer --end, TIMEOUT, ERROR or owner stop; "body" says which; stop
     "error"   (exit 4)  you misused the tool; "body" says how
 
 Rules the code cannot enforce:
@@ -38,6 +39,7 @@ from typing import Any, NoReturn
 
 MSG = re.compile(r"ch-(p2s|s2p)-\d{3}\.json")  # anything else in the directory is ignored
 ROLES = ("primary", "secondary")
+STOP = "STOP"  # the owner's kill switch, written by `stop`; checked before every send and on every poll
 MAX_MESSAGES = 2000  # ch-p2s-000 .. ch-s2p-999
 DEFAULT_MAX_WAIT_MINUTES = 60.0
 POLL_SECONDS = 5.0
@@ -107,6 +109,8 @@ def state(d: Path, role: str) -> tuple[int, dict[str, Any], str]:
     """
     if not d.is_dir():
         out("error", ERROR, body=f"no such channel directory: {d}")
+    if (d / STOP).exists():
+        out("closed", CLOSED, by="owner", body="STOP: halted by the owner")
     for r in ROLES:
         if abort_file(d, r).exists():
             try:
@@ -190,6 +194,14 @@ def cmd_recv(args: argparse.Namespace) -> NoReturn:
         time.sleep(POLL_SECONDS)
 
 
+def cmd_stop(args: argparse.Namespace) -> NoReturn:
+    d = Path(args.dir)
+    if not d.is_dir():
+        out("error", ERROR, body=f"no such channel directory: {d}")
+    (d / STOP).touch()  # idempotent; a blocked recv notices within one poll
+    out("stopped", OK, file=STOP)
+
+
 def main() -> NoReturn:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -218,6 +230,10 @@ def main() -> NoReturn:
     p.add_argument("--block-seconds", type=float, default=540.0,
                    help="return 'waiting' after this long; keep it under your tool's time limit")
     p.set_defaults(func=cmd_recv)
+
+    p = sub.add_parser("stop")
+    p.add_argument("dir")
+    p.set_defaults(func=cmd_stop)
 
     args = parser.parse_args()
     args.func(args)

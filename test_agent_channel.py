@@ -156,6 +156,31 @@ class ChannelTest(unittest.TestCase):
         self.assertEqual((code, result["status"]), (3, "closed"))
         self.assertTrue(result["body"].startswith("TIMEOUT:"))
 
+    def test_stop_interrupts_a_blocked_recv(self) -> None:
+        self.send("primary", "task")
+        waiter = start("recv", self.dir, "primary", "--block-seconds", "60")
+        time.sleep(1)
+        self.assertIsNone(waiter.poll(), "recv returned before the owner stopped the channel")
+        began = time.monotonic()
+        code, result = run("stop", self.dir)
+        self.assertEqual((code, result["status"]), (0, "stopped"))
+        code, result = finish(waiter)
+        self.assertLess(time.monotonic() - began, 30, "recv did not notice STOP within one poll")
+        self.assertEqual((code, result["status"], result["by"]), (3, "closed", "owner"))
+        self.assertTrue(result["body"].startswith("STOP:"))
+
+    def test_stop_closes_for_both_sides_and_is_idempotent(self) -> None:
+        self.send("primary", "task")
+        self.assertEqual(run("stop", self.dir)[1]["status"], "stopped")
+        self.assertEqual(run("stop", self.dir)[1]["status"], "stopped")
+        before = self.messages()
+        for role in ("primary", "secondary"):
+            code, result = self.send(role, "more")
+            self.assertEqual((code, result["status"], result["by"]), (3, "closed", "owner"))
+            code, result = self.recv(role)
+            self.assertEqual((code, result["status"], result["by"]), (3, "closed", "owner"))
+        self.assertEqual(self.messages(), before)
+
     def test_corrupt_message_closes_with_error(self) -> None:
         (Path(self.dir) / "ch-p2s-000.json").write_text('{"header": {}', encoding="utf-8")
         code, result = self.recv("secondary")
