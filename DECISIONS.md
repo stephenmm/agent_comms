@@ -132,5 +132,6 @@ chosen option: one existence test per poll.
 already a status they handle. Tested by two tests and one mutant.
 
 ## Open
-- **Done bar:** does Level 0 require a non-Claude agent trial? PLAN.md assumes **yes** (M3).
 - **D9** awaits the owner's confirmation; it was added on the assumption "in unless overruled".
+
+Resolved: the done bar required a non-Claude agent trial; met 2026-10-06 with OpenAI Codex (trial 5).

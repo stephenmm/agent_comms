@@ -75,3 +75,19 @@ messages, and saw no permission prompt for the channel commands (foreground Bash
 timeouts). Transcript: [trials/2026-10-06-trial4-cross-session/](trials/2026-10-06-trial4-cross-session/).
 Taken from its replies: the docstring now shows `--block-seconds 45` as a concrete way to fit a short tool
 limit, and the Copilot (M3) start prompt uses it. M2 done; the Level 0 "done" bar now needs only M3.
+
+## 2026-10-06 — Trial 5, Claude ↔ Codex (M3, non-Claude agent)
+Primary: this session. Secondary: OpenAI Codex in the Codex desktop app, which Stephen pasted the start
+prompt into (the plan named Copilot; the bar is "a non-Claude agent", and Codex meets it). Self-test
+passed: Codex kept the 120 s process in a command session and polled it within one turn. Three rounds,
+clean close, no owner prompt between messages. Transcript:
+[trials/2026-10-06-trial5-codex/](trials/2026-10-06-trial5-codex/). Findings:
+- The pasted path reached Codex as `E:\proj\agent\_comms\agent\_channel.py`: underscores had been
+  backslash-escaped somewhere between this session's output and Codex's input (a markdown artifact).
+  Codex recovered by searching `E:\proj`. Lesson: paste start prompts from a code block, and prefer
+  hyphens over underscores in channel and project names.
+- Writing into the channel needed a sandbox escalation on the Codex side, because the directory is
+  outside its writable roots; its automatic review allowed it. A stricter sandbox would have stalled the
+  trial, which is the "permission prompts" risk in PLAN.md showing up on a non-Claude agent.
+- `recv --block-seconds 45` never returned `waiting` because the primary replied within each block.
+M3 done. Copilot in VS Code remains untested.

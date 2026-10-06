@@ -7,8 +7,10 @@ commands, and never writes channel files by hand. Why code rather than a prose s
 [DECISIONS.md](DECISIONS.md) D1.
 
 ## Status
-Level 0 implemented and tested within one session; cross-session trials pending. Milestones and the
-definition of done are in [PLAN.md](PLAN.md).
+Level 0 complete apart from the release tag: five live trials passed (same-session, `waiting` re-run,
+Windows↔WSL, cross-session Claude↔Claude, Claude↔Codex), each with no human relaying messages.
+Milestones and the definition of done are in [PLAN.md](PLAN.md); each trial's transcript is under
+[`trials/`](trials/).
 
 ## How a channel runs
 1. The **primary** agent creates the channel and sends the first message, whose body gives the secondary
