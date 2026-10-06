@@ -30,7 +30,7 @@ Every command prints one JSON object with a `status` of `message`, `waiting`, `c
 
 ## Tests
 ```bash
-py -3.12 -m unittest test_agent_channel -v   # 26 black-box tests, about 1 min
+py -3.12 -m unittest test_agent_channel -v   # 27 black-box tests, about 1 min
 py -3.12 mutation_check.py                   # removes each guard in turn; every one must turn the suite red (about 4 min)
 py -3.12 -m mypy --strict agent_channel.py test_agent_channel.py mutation_check.py
 ```

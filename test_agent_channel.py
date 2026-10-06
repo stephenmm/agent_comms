@@ -85,6 +85,16 @@ class ChannelTest(unittest.TestCase):
         run("send", self.dir, "primary", "--body-file", str(path))
         self.assertEqual(self.recv("secondary")[1]["body"], "from a file ü")
 
+    def test_bom_from_powershell_is_stripped(self) -> None:
+        path = Path(self.tmp.name) / "body.txt"
+        path.write_bytes("﻿reply from PowerShell".encode("utf-8"))
+        run("send", self.dir, "primary", "--body-file", str(path))
+        self.assertEqual(self.recv("secondary")[1]["body"], "reply from PowerShell")
+        self.send("secondary", "ok")
+        code, result = run("send", self.dir, "primary", body="﻿piped")
+        self.assertEqual(code, 0)
+        self.assertEqual(self.recv("secondary")[1]["body"], "piped")
+
     def test_recv_is_idempotent_and_stateless(self) -> None:
         self.send("primary", "task")
         self.assertEqual(self.recv("secondary"), self.recv("secondary"))

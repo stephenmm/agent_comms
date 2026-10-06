@@ -141,7 +141,8 @@ def cmd_init(args: argparse.Namespace) -> NoReturn:
         f"  2. python {script} recv {d} secondary\n"
         f"  3. Do what the body asks, reply with `send`, then `recv` again.\n"
         f'Repeat step 3 until the status is "closed". Never ask me to check the channel.\n'
-        f"Paths are as the primary sees them; translate them if your view of the disk differs."
+        f"Paths are as the primary sees them; translate them if your view of the disk differs. "
+        f"Run with python or python3, whichever your system provides."
     )
     out("created", OK, dir=str(d), secondary_start_prompt=prompt)
 
@@ -161,7 +162,7 @@ def cmd_send(args: argparse.Namespace) -> NoReturn:
     if n >= MAX_MESSAGES:
         close(d, role, "ERROR: message numbers exhausted")
     raw = Path(args.body_file).read_bytes() if args.body_file else sys.stdin.buffer.read()
-    body = raw.decode("utf-8").strip()
+    body = raw.decode("utf-8-sig").strip()  # utf-8-sig drops the BOM that PowerShell 5.1 adds
     if not body and not args.end:
         out("error", ERROR, body="empty body")
     header: dict[str, Any] = {"end": True} if args.end else {}

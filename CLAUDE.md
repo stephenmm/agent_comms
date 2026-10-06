@@ -6,8 +6,8 @@ Minimal file-based channel for two AI agents to exchange prompts with no human r
 Level 0 of an agent-to-agent channel: two agents (primary, secondary) alternate numbered, immutable JSON
 messages in a shared directory. The protocol is the script `agent_channel.py`, not a prose spec; rules
 the code cannot enforce live in its docstring. State as of 2026-10-06: implemented (including the
-owner's `stop` kill switch), 26 tests, guard-removal check 14/14, one same-session live trial;
-cross-session trials are next. Progress and
+owner's `stop` kill switch), 27 tests, 15 guards each covered by a test that goes red, three live trials
+(same-session, `waiting` re-run, Windows↔WSL); the cross-session and Copilot trials are next. Progress and
 acceptance criteria are in PLAN.md; every design choice and the alternatives rejected are in
 DECISIONS.md; HISTORY.md says how we got here.
 

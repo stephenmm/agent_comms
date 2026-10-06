@@ -51,3 +51,18 @@ human. Recorded as D2.
 Repo `agent_comms` scaffolded on E: with its private GitHub repo. Code, tests, trial transcript, the
 archived v0.1 spec, DECISIONS.md, PLAN.md and this file committed. Milestone M0 of
 [PLAN.md](PLAN.md) done.
+
+## 2026-10-06 — Kill switch (D9) and trials 2 and 3, run in parallel
+- `stop <dir>` added: writes `STOP`; a blocked `recv` closes within one poll (26 tests, 14 mutants).
+  Recorded as D9, awaiting Stephen's confirmation.
+- **Trial 2, `waiting` re-run** ([trials/2026-10-06-trial2-waiting-rerun/](trials/2026-10-06-trial2-waiting-rerun/)):
+  a Sonnet subagent as primary ran `recv --block-seconds 60` against a peer process that slept 200 s.
+  Three `waiting` results, message picked up on the fourth run, no human input. Finding: a body piped
+  from PowerShell 5.1 carries a UTF-8 BOM that `.strip()` leaves in place.
+- **Trial 3, Windows ↔ WSL** ([trials/2026-10-06-trial3-windows-wsl/](trials/2026-10-06-trial3-windows-wsl/)):
+  Windows primary (this session), secondary run inside WSL via `wsl.exe` by a Sonnet subagent. Self-test
+  passed in WSL; paths translated to `/mnt/e/...` as the start prompt says; one round and a clean close.
+  Findings: WSL has `python3` but no `python`, so the start prompt's bare `python` is not portable; the
+  BOM again, this time from the Windows primary's own PowerShell `send`. M4 done.
+- Both findings fixed: `send` decodes bodies as `utf-8-sig` (test and mutant added, 27 tests, 15
+  mutants); the secondary start prompt now says to run with `python` or `python3`, whichever exists.

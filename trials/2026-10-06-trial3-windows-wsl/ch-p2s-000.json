@@ -1,0 +1,1 @@
+{"header": {"max_wait_minutes": 30.0}, "body": "﻿You are the WSL-side responder. Task: inside WSL run uname -a and python3 --version, and reply with (1) both outputs, (2) the exact channel path you used from inside WSL, (3) whether anything in the start prompt or the script was unclear from the WSL side. Under 120 words."}
