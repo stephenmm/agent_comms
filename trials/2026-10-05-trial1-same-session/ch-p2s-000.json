@@ -1,0 +1,1 @@
+{"header": {"max_wait_minutes": 20.0}, "body": "Your role: independent code reviewer. Task: review the agent_channel.py script you just read. Reply with (1) the single most serious bug or protocol ambiguity you can find, with the line it is on, and (2) anything in the docstring that left you unsure what to do. Maximum 150 words. Do not modify any files."}
