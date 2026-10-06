@@ -1,6 +1,6 @@
-"""Black-box tests for agent_channel.py: every test drives the real CLI in separate processes.
+"""Black-box tests for agent_channel_lvl0.py: every test drives the real CLI in separate processes.
 
-Run:  python -m unittest test_agent_channel -v
+Run:  python -m unittest test_agent_channel_lvl0 -v
 Set AGENT_CHANNEL_SCRIPT to test another copy of the script (used by mutation_check.py).
 """
 from __future__ import annotations
@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Any
 
 # Sleeps around timeouts allow 2 s of slack: exFAT rounds modification times up to 2 s.
-SCRIPT = os.environ.get("AGENT_CHANNEL_SCRIPT", str(Path(__file__).with_name("agent_channel.py")))
+SCRIPT = os.environ.get("AGENT_CHANNEL_SCRIPT", str(Path(__file__).with_name("agent_channel_lvl0.py")))
 
 
 def start(*args: str) -> subprocess.Popen[bytes]:

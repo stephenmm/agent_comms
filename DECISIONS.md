@@ -113,7 +113,7 @@ first body sets the secondary's role and task; a channel message never widens wh
 allowed. They govern agent behaviour outside the script's reach.
 
 ## D9. Owner kill switch: a `STOP` file
-**Status:** Proposed and implemented 2026-10-06; becomes Accepted when the owner confirms
+**Status:** Accepted, 2026-10-06 (implemented on the assumption "in unless overruled"; confirmed by Stephen the same day)
 
 **Context.** Two agents that loop can burn tokens with nobody at the keyboard. The owner needs a way to
 halt both without hunting for processes, and it must work from any shell on either side of a Windows/WSL
@@ -131,7 +131,22 @@ chosen option: one existence test per poll.
 **Consequences.** One more command for owners to know about; agents need nothing new, since `closed` was
 already a status they handle. Tested by two tests and one mutant.
 
-## Open
-- **D9** awaits the owner's confirmation; it was added on the assumption "in unless overruled".
+## D10. The level lives in the script name; releases use three-part tags
+**Status:** Accepted, 2026-10-06
 
-Resolved: the done bar required a non-Claude agent trial; met 2026-10-06 with OpenAI Codex (trial 5).
+**Context.** Level 0 was complete and needed a release tag. The question was how to name the tag and how
+a future Level 1 would be told apart from Level 0.
+
+**Decision.** The script is `agent_channel_lvl0.py` (renamed from `agent_channel.py`; entries D1–D9 above
+use the old name). Releases are tagged `vMAJOR.MINOR.PATCH`, starting at `v1.0.0`. A new protocol level is
+a new script beside the old one, so Level 0 channels keep working unchanged.
+
+**Options.** Level in the tag (`l0-1.0`): rejected, the tag would carry two unrelated version axes. Level
+in the script name with plain semver: **chosen**. Two-part tags (`v1.0`): rejected for standard semver.
+
+**Consequences.** `init` prints the script's own path, so start prompts pick up the new name
+automatically. Test module renamed to `test_agent_channel_lvl0.py`; `mutation_check.py` stays generic.
+
+## Open
+Nothing open for Level 0. Resolved on 2026-10-06: D9 confirmed; the done bar's non-Claude trial was
+met with OpenAI Codex (trial 5).

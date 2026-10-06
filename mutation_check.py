@@ -1,4 +1,4 @@
-"""Prove the tests can go red: remove one guard at a time from agent_channel.py and expect a failure.
+"""Prove the tests can go red: remove one guard at a time from agent_channel_lvl0.py and expect a failure.
 
 Run:  python mutation_check.py
 """
@@ -12,7 +12,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 HERE = Path(__file__).parent
-SOURCE = (HERE / "agent_channel.py").read_text(encoding="utf-8")
+SOURCE = (HERE / "agent_channel_lvl0.py").read_text(encoding="utf-8")
 
 # guard removed -> (text in the script, replacement)
 MUTANTS: dict[str, tuple[str, str]] = {
@@ -37,7 +37,7 @@ MUTANTS: dict[str, tuple[str, str]] = {
 
 def tests_pass(script: Path) -> bool:
     env = {**os.environ, "AGENT_CHANNEL_SCRIPT": str(script)}
-    proc = subprocess.run([sys.executable, "-m", "unittest", "test_agent_channel"],
+    proc = subprocess.run([sys.executable, "-m", "unittest", "test_agent_channel_lvl0"],
                           cwd=HERE, env=env, capture_output=True)
     return proc.returncode == 0
 
@@ -50,7 +50,7 @@ def check(guard: str, tmp: str) -> bool:
         return False
     folder = Path(tmp) / str(list(MUTANTS).index(guard))
     folder.mkdir()
-    mutant = folder / "agent_channel.py"
+    mutant = folder / "agent_channel_lvl0.py"
     mutant.write_text(SOURCE.replace(old, new), encoding="utf-8")
     caught = not tests_pass(mutant)
     print(f"{'caught  ' if caught else 'SURVIVED'}  {guard}")
@@ -58,7 +58,7 @@ def check(guard: str, tmp: str) -> bool:
 
 
 def main() -> int:
-    if not tests_pass(HERE / "agent_channel.py"):
+    if not tests_pass(HERE / "agent_channel_lvl0.py"):
         print("the unmodified script fails its tests; fix that first")
         return 1
     with tempfile.TemporaryDirectory() as tmp, ThreadPoolExecutor(max_workers=4) as pool:

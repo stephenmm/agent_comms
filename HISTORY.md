@@ -91,3 +91,10 @@ clean close, no owner prompt between messages. Transcript:
   trial, which is the "permission prompts" risk in PLAN.md showing up on a non-Claude agent.
 - `recv --block-seconds 45` never returned `waiting` because the primary replied within each block.
 M3 done. Copilot in VS Code remains untested.
+
+## 2026-10-06 — Release v1.0.0 (M5)
+Stephen confirmed D9 (kill switch stays) and chose three-part tags with the level in the script name (D10).
+`agent_channel.py` renamed to `agent_channel_lvl0.py`, tests to `test_agent_channel_lvl0.py`; all live
+references updated, historical ones left as written. Suite, `mypy --strict` and the guard-removal check
+re-run after the rename. Tagged `v1.0.0`. Level 0 is complete: every milestone in PLAN.md done, five live
+trials, no human relaying a message in any of them.

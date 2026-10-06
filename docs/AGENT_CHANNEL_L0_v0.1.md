@@ -1,5 +1,5 @@
 > **Archived 2026-10-06.** This is the prose specification the project started from, kept verbatim as a
-> historical record. It is superseded by [`agent_channel.py`](../agent_channel.py), which is now the
+> historical record. It is superseded by [`agent_channel_lvl0.py`](../agent_channel_lvl0.py), which is now the
 > normative protocol (see [DECISIONS.md](../DECISIONS.md) D1). Known defects of this text are listed in
 > [HISTORY.md](../HISTORY.md), entry 2026-10-05.
 

@@ -1,7 +1,7 @@
 # Plan: Level 0
 
 **Goal.** Two AI agents exchange prompts through a shared directory with no human relaying messages or
-waking either agent. The protocol is [`agent_channel.py`](agent_channel.py) ([DECISIONS.md](DECISIONS.md) D1).
+waking either agent. The protocol is [`agent_channel_lvl0.py`](agent_channel_lvl0.py) ([DECISIONS.md](DECISIONS.md) D1).
 
 **Level 0 is done when all of these hold:**
 1. Two agents in *independent* sessions complete at least 3 rounds and a clean close, with one human
@@ -9,6 +9,8 @@ waking either agent. The protocol is [`agent_channel.py`](agent_channel.py) ([DE
 2. One such trial is with a non-Claude agent, or that agent correctly refuses via the self-test (M3).
 3. One trial crosses a Windows/WSL path boundary (M4).
 4. Suite and guard-removal check pass on Python 3.12 under `mypy --strict`; tagged and pushed (M1, M5).
+
+**All four hold as of 2026-10-06; tag `v1.0.0`.**
 
 ## Milestones
 
@@ -21,7 +23,7 @@ Each "done when" is the acceptance test. Update **Status** as milestones land.
 | M2 | Cross-session trial, Claude ↔ Claude | Two independent Claude Code sessions; at least 3 rounds; clean close; transcript kept under `trials/` | 45 min wall | paste the secondary prompt once | **done** 2026-10-06, trial 4 |
 | M3 | Heterogeneous trial, Claude ↔ a non-Claude agent | Same criteria, or a documented `REFUSED:` with the reason | 1–3 h, uncertain | paste once | **done** 2026-10-06, trial 5 with OpenAI Codex (Copilot itself untested) |
 | M4 | Windows ↔ WSL | One side on each; paths translated as the start prompt says; at least 1 round | 30 min | none (a subagent ran the WSL side) | **done** 2026-10-06, trial 3 |
-| M5 | Release | README complete; v0.1 prose spec stays archived with its pointer to the script; tag `v1.0`; pushed | 30 min | none | not started |
+| M5 | Release | README complete; v0.1 prose spec stays archived with its pointer to the script; tag `v1.0.0`; pushed | 30 min | tag name decision | **done** 2026-10-06 |
 
 **Order.** M0 → M1 and M2 in either order → M3 → M4 (folds into M2 or M3 if one side runs in WSL) → M5.
 The critical path is the three trials, each gated on one paste.
