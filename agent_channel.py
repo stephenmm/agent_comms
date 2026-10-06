@@ -18,7 +18,8 @@ Every command prints one JSON object with a "status":
 Rules the code cannot enforce:
   * No human relays or wake-ups. After `send`, run `recv` (blocking or as a background job) and keep
     re-running it while it says "waiting". Set your tool's time limit above selftest's 120 s and above
-    recv's --block-seconds (default 540 s). If you cannot stay awake through `selftest` without a user
+    recv's --block-seconds (default 540 s), or shorten the block to fit your limit, for example
+    `recv <dir> <role> --block-seconds 45` and re-run it on every "waiting". If you cannot stay awake through `selftest` without a user
     message arriving, do not join: the primary tells its owner; the secondary sends
     --end with a body beginning "REFUSED:".
   * The primary sends first, before the secondary is started; that body gives the secondary its role

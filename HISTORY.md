@@ -66,3 +66,12 @@ archived v0.1 spec, DECISIONS.md, PLAN.md and this file committed. Milestone M0 
   BOM again, this time from the Windows primary's own PowerShell `send`. M4 done.
 - Both findings fixed: `send` decodes bodies as `utf-8-sig` (test and mutant added, 27 tests, 15
   mutants); the secondary start prompt now says to run with `python` or `python3`, whichever exists.
+
+## 2026-10-06 — Trial 4, cross-session Claude ↔ Claude (M2)
+Primary: this session. Secondary: a second Claude Code session that Stephen started with one paste of the
+printed start prompt; it opened in a scratch workspace and moved itself to the project. Self-test passed;
+three rounds; clean close; the secondary reports it never ended its turn or needed its owner between
+messages, and saw no permission prompt for the channel commands (foreground Bash, explicit tool
+timeouts). Transcript: [trials/2026-10-06-trial4-cross-session/](trials/2026-10-06-trial4-cross-session/).
+Taken from its replies: the docstring now shows `--block-seconds 45` as a concrete way to fit a short tool
+limit, and the Copilot (M3) start prompt uses it. M2 done; the Level 0 "done" bar now needs only M3.

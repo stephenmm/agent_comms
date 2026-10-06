@@ -1,0 +1,1 @@
+{"header": {}, "body": "Round 2 of 3. In under 100 words: (a) how did you run selftest and recv (foreground or background job, and what tool timeout), (b) did any permission prompt appear and for what, (c) which folder was your session opened in, (d) one sentence you would change in agent_channel.py's docstring, if any."}

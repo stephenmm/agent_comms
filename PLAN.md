@@ -18,7 +18,7 @@ Each "done when" is the acceptance test. Update **Status** as milestones land.
 |---|---|---|---|---|---|
 | M0 | Project home | `E:\proj\agent_comms` scaffolded with private repo; code, tests, trial and records committed and pushed; suite passes there | 15 min | none | **done** 2026-10-06 |
 | M1 | Harden | Suite and `mutation_check.py` 100% on Python 3.12 with `mypy --strict`; `STOP` kill switch added with a test and a mutant; one trial in which the primary's `recv` returns `waiting` at least once (run it with `--block-seconds 60` against a peer that takes 3–5 min) | 1–2 h | none | **done** 2026-10-06: 27 tests, 15/15 mutants, trial 2; plus BOM and python3 fixes from the trials |
-| M2 | Cross-session trial, Claude ↔ Claude | Two independent Claude Code sessions; at least 3 rounds; clean close; transcript kept under `trials/` | 45 min wall | paste the secondary prompt once | not started |
+| M2 | Cross-session trial, Claude ↔ Claude | Two independent Claude Code sessions; at least 3 rounds; clean close; transcript kept under `trials/` | 45 min wall | paste the secondary prompt once | **done** 2026-10-06, trial 4 |
 | M3 | Heterogeneous trial, Claude ↔ Copilot | Same criteria, or a documented `REFUSED:` with the reason | 1–3 h, uncertain | paste once, in VS Code | not started |
 | M4 | Windows ↔ WSL | One side on each; paths translated as the start prompt says; at least 1 round | 30 min | none (a subagent ran the WSL side) | **done** 2026-10-06, trial 3 |
 | M5 | Release | README complete; v0.1 prose spec stays archived with its pointer to the script; tag `v1.0`; pushed | 30 min | none | not started |
