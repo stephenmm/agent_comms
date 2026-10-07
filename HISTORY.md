@@ -136,3 +136,6 @@ Tests: the fake secondary now reports how many bytes it read from stdin (must eq
 and a rejected spawn must leave no directory and must be retryable under the same session. Mutants added for
 the stdin feed and the validate-before-create order (19 guards). Not covered by a test: a process-start
 `OSError` on the codex/claude paths, since `command` templates run through a shell that always starts.
+Trial 6b verified the changed Codex path live: spawned with the prompt on stdin, Codex confirmed the prompt
+arrived complete (channel path and all three steps), passed the self-test, replied and saw the close.
+[trials/2026-10-06-trial6b-stdin-codex/](trials/2026-10-06-trial6b-stdin-codex/).

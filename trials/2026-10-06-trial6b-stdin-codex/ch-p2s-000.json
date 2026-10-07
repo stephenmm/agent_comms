@@ -1,0 +1,1 @@
+{"header": {"max_wait_minutes": 15.0}, "body": "Role: secondary spawned headlessly (trial 6b, verifying prompt delivery over stdin after the v1.1.1 fixes). Reply in under 60 words: (a) did your start prompt arrive complete, including the channel path and all three numbered steps? (b) did selftest pass? I will close right after your reply."}

@@ -1,0 +1,1 @@
+Self-test passed. Confirmed the complete start prompt arrived, sent the reply, and received `closed` from the primary.
