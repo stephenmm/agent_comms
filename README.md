@@ -7,8 +7,9 @@ commands, and never writes channel files by hand. Why code rather than a prose s
 [DECISIONS.md](DECISIONS.md) D1.
 
 ## Status
-Level 0 complete, tagged `v1.0.0`: five live trials passed (same-session, `waiting` re-run,
-Windows↔WSL, cross-session Claude↔Claude, Claude↔Codex), each with no human relaying messages.
+Level 0 complete, tagged `v1.1.0`: five live trials passed (same-session, `waiting` re-run,
+Windows↔WSL, cross-session Claude↔Claude, Claude↔Codex, and a Codex secondary spawned by the primary with no paste at
+all), each with no human relaying messages.
 Milestones and the definition of done are in [PLAN.md](PLAN.md); each trial's transcript is under
 [`trials/`](trials/).
 

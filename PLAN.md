@@ -35,7 +35,7 @@ item. Calendar time depends on when the pastes can happen: realistically two or 
 
 | # | Milestone | Done when | Work | Human step | Status |
 |---|---|---|---|---|---|
-| M6 | `spawn` in Level 0 | `spawn --via codex\|claude\|command` with tests and mutants; one live trial in which the primary launches the secondary and completes a round with no paste; tag `v1.1.0` | 1–2 h | CLI sign-in | code done, 29 tests, 17/17 mutants; live trial blocked (see HISTORY, trial 6) |
+| M6 | `spawn` in Level 0 | `spawn --via codex\|claude\|command` with tests and mutants; one live trial in which the primary launches the secondary and completes a round with no paste; tag `v1.1.0` | 1–2 h | CLI sign-in | **done** 2026-10-06: trial 6 (Codex spawned headlessly, 2 rounds); 29 tests, 17/17 mutants; `v1.1.0` |
 
 **Level 1 scope (reserved, not planned here):** a rigorous initialization stage that measures each side's
 response speed before real work starts, so timeouts and block lengths can be set from data rather than

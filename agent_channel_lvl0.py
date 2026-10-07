@@ -164,24 +164,27 @@ def cmd_init(args: argparse.Namespace) -> NoReturn:
 
 
 def codex_exe() -> str:
-    """The Codex CLI: on PATH, or the copy the Codex desktop app keeps for itself."""
+    """The Codex CLI: on PATH, else the desktop app's full install (binary plus its code-mode host), else
+    the app's sandbox copy, which lacks the host and cannot run shell commands headlessly (trial 6)."""
     found = shutil.which("codex") or shutil.which("codex.exe")
-    bundled = Path.home() / ".codex" / ".sandbox-bin" / "codex.exe"
     if found:
         return found
+    local = Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local"))
+    for exe in sorted(local.glob("OpenAI/Codex/bin/*/codex.exe"), key=lambda e: e.stat().st_mtime, reverse=True):
+        if (exe.parent / "codex-code-mode-host.exe").exists():
+            return str(exe)
+    bundled = Path.home() / ".codex" / ".sandbox-bin" / "codex.exe"
     if bundled.exists():
         return str(bundled)
-    out("error", ERROR, body="codex CLI not found on PATH or in ~/.codex/.sandbox-bin")
+    out("error", ERROR, body="codex CLI not found on PATH, under %LOCALAPPDATA%/OpenAI/Codex/bin, or in ~/.codex/.sandbox-bin")
 
 
 def launcher(via: str, template: str | None, d: Path, prompt_file: Path) -> tuple[list[str] | str, bool]:
     """The secondary's command line and whether it needs a shell. The prompt is passed as text or by file."""
     prompt = prompt_file.read_text(encoding="utf-8")
     if via == "codex":
-        # --disable code_mode_host: the desktop app's bundled CLI lacks that host executable, and with it
-        # enabled the shell tool fails closed and the agent can run nothing (trial 6, attempt 2).
         return [codex_exe(), "exec", "-C", str(d), "--skip-git-repo-check", "--sandbox", "workspace-write",
-                "--disable", "code_mode_host", "-o", str(d / ".secondary-last.txt"), prompt], False
+                "-o", str(d / ".secondary-last.txt"), prompt], False
     if via == "claude":
         claude = shutil.which("claude") or out("error", ERROR, body="claude CLI not found on PATH")
         # Headless: only Python may run, and the project directory holding this script is readable.

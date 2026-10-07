@@ -8,7 +8,7 @@ messages in a shared directory. The protocol is the script `agent_channel_lvl0.p
 the code cannot enforce live in its docstring. State as of 2026-10-06: implemented (including the
 owner's `stop` kill switch), 27 tests, 15 guards each covered by a test that goes red, five live trials
 (same-session, `waiting` re-run, Windows↔WSL, cross-session Claude↔Claude, Claude↔Codex). Level 0 is
-complete and tagged v1.0.0. Progress and
+complete: v1.0.0 (protocol) and v1.1.0 (`spawn`, trial 6). Progress and
 acceptance criteria are in PLAN.md; every design choice and the alternatives rejected are in
 DECISIONS.md; HISTORY.md says how we got here.
 
@@ -44,5 +44,5 @@ py -3.12 -m mypy --strict agent_channel_lvl0.py test_agent_channel_lvl0.py mutat
 Timing-sensitive tests allow about 2 s of slack because E: is exFAT (mtime granularity 2 s).
 
 ## Open questions / TODO
-M6 (PLAN.md addendum): a live `spawn` trial needs a signed-in `claude` CLI or the public Codex CLI; then tag v1.1.0. Level 1 candidates are listed at the end of PLAN.md; a new level is a new script
+None for Level 0 (v1.1.0). `spawn --via claude` has not been exercised live; it needs a signed-in `claude` CLI. Level 1 candidates are listed at the end of PLAN.md; a new level is a new script
 (`agent_channel_lvl1.py`), never a rewrite of this one.

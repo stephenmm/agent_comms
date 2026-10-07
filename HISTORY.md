@@ -112,3 +112,9 @@ added with a test that launches a fake secondary through `--via command` and two
 4. Claude CLI (`claude -p`, Bash limited to Python, project dir readable): "OAuth session expired and could
    not be refreshed". Needs one interactive `claude` login, then the trial is unchanged.
 In all four the spawn mechanics worked: process launched detached, prompt delivered, log captured.
+5. Codex, fifth attempt, success: the app keeps a complete CLI (binary plus `codex-code-mode-host.exe`) under
+   `%LOCALAPPDATA%\OpenAI\Codexin\<hash>\`; `codex_exe()` now prefers it. The primary spawned Codex with
+   no human step; Codex passed the 120 s self-test in `workspace-write` with approvals `never`, completed two
+   rounds and saw the close. Transcript and the secondary's own log:
+   [trials/2026-10-06-trial6-spawn-codex/](trials/2026-10-06-trial6-spawn-codex/). M6 done; tagged `v1.1.0`.
+   Still untested live: `--via claude` (needs an interactive `claude` login first).
