@@ -39,7 +39,8 @@ def run(*args: str, body: str | None = None) -> tuple[int, dict[str, Any]]:
 
 class ChannelTest(unittest.TestCase):
     def setUp(self) -> None:
-        self.tmp = tempfile.TemporaryDirectory()
+        # Detached children spawned by some tests may hold their log open a moment after the test ends.
+        self.tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         code, result = run("init", self.tmp.name, "--session", "t")
         self.assertEqual((code, result["status"]), (0, "created"))
         self.dir = result["dir"]
@@ -255,14 +256,14 @@ class ChannelTest(unittest.TestCase):
         code, result = self.send("primary", "   \n")
         self.assertEqual((code, result["status"]), (4, "error"))
 
-    def test_spawn_launches_a_secondary_that_can_reply(self) -> None:
+    def test_spawn_launches_a_secondary_that_gets_the_whole_prompt_on_stdin(self) -> None:
         parent = Path(self.tmp.name) / "spawned"
-        # Fake secondary: read the prompt file, find the channel dir in it, reply with the prompt's length.
+        # Fake secondary: read the prompt from stdin, find the channel dir in it, reply with the stdin length.
         fake = (
-            "import re,subprocess,sys,pathlib;"
-            "p=pathlib.Path(sys.argv[1]).read_text(encoding='utf-8');"
+            "import re,subprocess,sys;"
+            "p=sys.stdin.buffer.read().decode('utf-8');"
             "d=re.search(r'recv (.+?) secondary', p).group(1);"
-            "subprocess.run([sys.executable, %r, 'send', d, 'secondary'], input=('prompt chars: %%d' %% len(p)).encode())"
+            "subprocess.run([sys.executable, %r, 'send', d, 'secondary'], input=('stdin chars: %%d' %% len(p)).encode())"
         ) % SCRIPT
         template = f'"{sys.executable}" -c "{fake}" "{{prompt_file}}"'
         code, result = run("spawn", str(parent), "--via", "command", "--command", template, "--session", "x",
@@ -271,15 +272,33 @@ class ChannelTest(unittest.TestCase):
         d = result["dir"]
         prompt = (Path(d) / ".secondary-prompt.txt").read_text(encoding="utf-8")
         self.assertIn(d, prompt)
+        self.assertGreater(prompt.count("\n"), 3, "the start prompt is multi-line; that is what shims truncate")
         code, result = run("recv", d, "primary", "--block-seconds", "30")
         self.assertEqual((code, result["status"]), (0, "message"))
-        self.assertEqual(result["body"], f"prompt chars: {len(prompt)}")
+        self.assertEqual(result["body"], f"stdin chars: {len(prompt)}")
         self.assertEqual(run("recv", d, "secondary", "--block-seconds", "0")[1]["status"], "waiting")
 
-    def test_spawn_rejects_bad_command_template(self) -> None:
-        code, result = run("spawn", str(Path(self.tmp.name) / "bad"), "--via", "command", "--command", "echo hi",
-                           "--session", "x", body="task")
+    def test_spawn_validates_before_creating_anything_and_can_be_retried(self) -> None:
+        parent = Path(self.tmp.name) / "retry"
+        code, result = run("spawn", str(parent), "--via", "command", "--command", "echo hi", "--session", "x",
+                           body="task")
         self.assertEqual((code, result["status"]), (4, "error"))
+        self.assertFalse(parent.exists(), "a rejected spawn must leave no channel behind")
+        env = {**os.environ, "PATH": ""}  # no claude on PATH: validation must fail before the channel exists
+        proc = subprocess.Popen([sys.executable, SCRIPT, "spawn", str(parent), "--via", "claude", "--session", "x"],
+                                stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
+        code, result = finish(proc, "task")
+        self.assertEqual((code, result["status"]), (4, "error"))
+        self.assertFalse(parent.exists())
+        fake = "import sys,pathlib; sys.stdin.read(); pathlib.Path('done').write_text('1')"
+        template = f'"{sys.executable}" -c "{fake}" "{{prompt_file}}"'
+        code, result = run("spawn", str(parent), "--via", "command", "--command", template, "--session", "x",
+                           body="task")
+        self.assertEqual((code, result["status"]), (0, "spawned"), "same session must work once the launcher is valid")
+        deadline = time.monotonic() + 20
+        while not (Path(result["dir"]) / "done").exists() and time.monotonic() < deadline:
+            time.sleep(0.2)
+        self.assertTrue((Path(result["dir"]) / "done").exists(), "spawned child did not run to completion")
 
     def test_selftest_is_silent_then_passes(self) -> None:
         began = time.monotonic()

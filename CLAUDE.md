@@ -8,7 +8,7 @@ messages in a shared directory. The protocol is the script `agent_channel_lvl0.p
 the code cannot enforce live in its docstring. State as of 2026-10-06: implemented (including the
 owner's `stop` kill switch), 27 tests, 15 guards each covered by a test that goes red, five live trials
 (same-session, `waiting` re-run, Windows↔WSL, cross-session Claude↔Claude, Claude↔Codex). Level 0 is
-complete: v1.0.0 (protocol) and v1.1.0 (`spawn`, trial 6). Progress and
+complete: v1.0.0 (protocol) and v1.1.x (`spawn`, trial 6, reviewed). Progress and
 acceptance criteria are in PLAN.md; every design choice and the alternatives rejected are in
 DECISIONS.md; HISTORY.md says how we got here.
 

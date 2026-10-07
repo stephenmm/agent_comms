@@ -34,6 +34,9 @@ MUTANTS: dict[str, tuple[str, str]] = {
     "spawn passes the start prompt": ('prompt_file.write_text(prompt, encoding="utf-8")',
                                       'prompt_file.write_text("x" * 200, encoding="utf-8")'),
     "spawn validates the template": ('if not template or "{prompt_file}" not in template:', "if False:"),
+    "spawn feeds the prompt on stdin": ('proc.stdin.write(prompt.encode("utf-8"))', "pass"),
+    "spawn validates before creating": ("    cmd, use_shell = launcher(args.via, args.command, d, prompt_file)  # validate before anything is created\n    d, prompt = create_channel(args.parent, args.session)\n",
+                                        "    d, prompt = create_channel(args.parent, args.session)\n    cmd, use_shell = launcher(args.via, args.command, d, prompt_file)\n"),
     "BOM stripped from body": ('raw.decode("utf-8-sig").strip()  # utf-8-sig', 'raw.decode("utf-8").strip()  # utf-8-sig'),
 }
 

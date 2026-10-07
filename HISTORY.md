@@ -118,3 +118,21 @@ In all four the spawn mechanics worked: process launched detached, prompt delive
    rounds and saw the close. Transcript and the secondary's own log:
    [trials/2026-10-06-trial6-spawn-codex/](trials/2026-10-06-trial6-spawn-codex/). M6 done; tagged `v1.1.0`.
    Still untested live: `--via claude` (needs an interactive `claude` login first).
+
+## 2026-10-06 — Review of `spawn` by Codex; three defects fixed (v1.1.1)
+Stephen had Codex review the `spawn` change. It found three real defects, all confirmed by reproduction:
+1. A prompt passed as a command-line argument is truncated at its first newline when the CLI resolves to a
+   Windows `.cmd` shim. Fix: every launcher now receives the prompt on stdin (`codex exec -`, `claude -p`
+   with no prompt argument, and `command` templates too). Finding the right way to do that took a probe:
+   with `shell=True` *and* `DETACHED_PROCESS`, a child never sees its stdin at all (it hangs); every other
+   combination works. `DETACHED_PROCESS` was dropped; `CREATE_NEW_PROCESS_GROUP` alone already lets the child
+   outlive the primary and ignore its Ctrl-C.
+2. `codex_exe()` returned the first PATH hit even when it was the app's incomplete `.sandbox-bin` copy. It now
+   skips that copy and keeps looking for the full install.
+3. `spawn` created the channel and message 0 before validating the launcher, so a bad template left a live
+   channel and a retry with the same session crashed. It now validates first; a process-start failure writes
+   an abort file (terminal `closed`) instead of leaving a channel waiting.
+Tests: the fake secondary now reports how many bytes it read from stdin (must equal the multi-line prompt),
+and a rejected spawn must leave no directory and must be retryable under the same session. Mutants added for
+the stdin feed and the validate-before-create order (19 guards). Not covered by a test: a process-start
+`OSError` on the codex/claude paths, since `command` templates run through a shell that always starts.

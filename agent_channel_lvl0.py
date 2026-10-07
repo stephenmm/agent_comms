@@ -11,7 +11,8 @@ This file IS the protocol. Read it, then use only these commands (never write ch
     stop <dir>                  owner only: halt the channel; both agents get "closed" on their next command
 
 `spawn` removes the one human step: it runs init, sends your first message (stdin or --body-file), writes
-the start prompt to <dir>/.secondary-prompt.txt and launches the secondary as a detached process:
+the start prompt to <dir>/.secondary-prompt.txt and launches the secondary as a detached process, with the
+prompt on its stdin:
     --via codex      codex exec, sandbox workspace-write, no approvals; output in <dir>/.secondary.log
     --via claude     claude -p, headless; Bash limited to python, project dir readable (trial 6)
     --via command --command '<shell template containing {prompt_file}>'   any other agent CLI
@@ -163,32 +164,35 @@ def cmd_init(args: argparse.Namespace) -> NoReturn:
     out("created", OK, dir=str(d), secondary_start_prompt=prompt)
 
 
+SANDBOX_CODEX = Path.home() / ".codex" / ".sandbox-bin" / "codex.exe"
+
+
 def codex_exe() -> str:
     """The Codex CLI: on PATH, else the desktop app's full install (binary plus its code-mode host), else
     the app's sandbox copy, which lacks the host and cannot run shell commands headlessly (trial 6)."""
     found = shutil.which("codex") or shutil.which("codex.exe")
-    if found:
+    if found and Path(found).resolve() != SANDBOX_CODEX.resolve():  # PATH may point at the incomplete copy
         return found
     local = Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local"))
     for exe in sorted(local.glob("OpenAI/Codex/bin/*/codex.exe"), key=lambda e: e.stat().st_mtime, reverse=True):
         if (exe.parent / "codex-code-mode-host.exe").exists():
             return str(exe)
-    bundled = Path.home() / ".codex" / ".sandbox-bin" / "codex.exe"
-    if bundled.exists():
-        return str(bundled)
+    if SANDBOX_CODEX.exists():
+        return str(SANDBOX_CODEX)
     out("error", ERROR, body="codex CLI not found on PATH, under %LOCALAPPDATA%/OpenAI/Codex/bin, or in ~/.codex/.sandbox-bin")
 
 
 def launcher(via: str, template: str | None, d: Path, prompt_file: Path) -> tuple[list[str] | str, bool]:
-    """The secondary's command line and whether it needs a shell. The prompt is passed as text or by file."""
-    prompt = prompt_file.read_text(encoding="utf-8")
+    """The secondary's command line and whether it needs a shell. Every launcher receives the start prompt on
+    stdin (a .cmd shim would truncate it at the first newline if passed as an argument); `command` templates
+    also get its path in place of {prompt_file}. Must not touch the filesystem: it runs before the channel exists."""
     if via == "codex":
         return [codex_exe(), "exec", "-C", str(d), "--skip-git-repo-check", "--sandbox", "workspace-write",
-                "-o", str(d / ".secondary-last.txt"), prompt], False
+                "-o", str(d / ".secondary-last.txt"), "-"], False
     if via == "claude":
         claude = shutil.which("claude") or out("error", ERROR, body="claude CLI not found on PATH")
         # Headless: only Python may run, and the project directory holding this script is readable.
-        return [claude, "-p", prompt, "--add-dir", str(Path(__file__).resolve().parent),
+        return [claude, "-p", "--add-dir", str(Path(__file__).resolve().parent),
                 "--allowedTools", "Read", "Bash(python:*)", "Bash(python3:*)", "Bash(py:*)"], False
     if not template or "{prompt_file}" not in template:
         out("error", ERROR, body="--via command needs --command with a {prompt_file} placeholder")
@@ -200,15 +204,25 @@ def cmd_spawn(args: argparse.Namespace) -> NoReturn:
     body = raw.decode("utf-8-sig").strip()
     if not body:
         out("error", ERROR, body="empty first message")
+    d = Path(args.parent).resolve() / f"{args.session}_agent_channel"
+    prompt_file = d / ".secondary-prompt.txt"
+    cmd, use_shell = launcher(args.via, args.command, d, prompt_file)  # validate before anything is created
     d, prompt = create_channel(args.parent, args.session)
     write(d / name(0), {"max_wait_minutes": args.max_wait_minutes}, body)
-    prompt_file = d / ".secondary-prompt.txt"
     prompt_file.write_text(prompt, encoding="utf-8")
-    cmd, use_shell = launcher(args.via, args.command, d, prompt_file)
     log = open(d / ".secondary.log", "ab")  # noqa: SIM115  # the child process owns this handle
-    flags = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0) | getattr(subprocess, "DETACHED_PROCESS", 0)
-    proc = subprocess.Popen(cmd, shell=use_shell, stdin=subprocess.DEVNULL, stdout=log, stderr=log,
-                            cwd=str(d), creationflags=flags, start_new_session=(flags == 0))
+    # New process group only: it outlives this process and ignores its Ctrl-C. Not DETACHED_PROCESS, which
+    # together with shell=True leaves the child unable to read its stdin (it hangs; see stdin_matrix probe).
+    flags = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
+    try:
+        proc = subprocess.Popen(cmd, shell=use_shell, stdin=subprocess.PIPE, stdout=log, stderr=log,
+                                cwd=str(d), creationflags=flags, start_new_session=(flags == 0))
+        # A pipe, not an inherited file handle: a detached child behind cmd.exe never sees EOF on the latter.
+        assert proc.stdin is not None
+        proc.stdin.write(prompt.encode("utf-8"))
+        proc.stdin.close()
+    except OSError as exc:
+        close(d, "primary", f"ERROR: could not start the secondary: {exc}")  # terminal state, not a stuck channel
     out("spawned", OK, dir=str(d), file=name(0), via=args.via, pid=proc.pid, log=str(d / ".secondary.log"))
 
 
