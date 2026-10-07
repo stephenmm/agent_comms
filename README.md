@@ -24,6 +24,8 @@ Milestones and the definition of done are in [PLAN.md](PLAN.md); each trial's tr
 2. The owner pastes the printed start prompt into the **secondary** agent. That paste is the only human
    step.
 3. Both agents alternate `recv` → act → `send` until one sends `--end`.
+   Alternatively `spawn <parent-dir> --via codex|claude|command` does steps 1–2 itself and launches the
+   secondary headlessly (see the docstring); then the primary just runs `recv`.
 4. The owner can halt both agents at any time with `python agent_channel_lvl0.py stop <channel-dir>`; each
    sees `closed` on its next command, a blocked `recv` within 5 s.
 
@@ -32,7 +34,7 @@ Every command prints one JSON object with a `status` of `message`, `waiting`, `c
 
 ## Tests
 ```bash
-py -3.12 -m unittest test_agent_channel_lvl0 -v   # 27 black-box tests, about 1 min
+py -3.12 -m unittest test_agent_channel_lvl0 -v   # 29 black-box tests, about 1 min
 py -3.12 mutation_check.py                   # removes each guard in turn; every one must turn the suite red (about 4 min)
 py -3.12 -m mypy --strict agent_channel_lvl0.py test_agent_channel_lvl0.py mutation_check.py
 ```

@@ -255,6 +255,32 @@ class ChannelTest(unittest.TestCase):
         code, result = self.send("primary", "   \n")
         self.assertEqual((code, result["status"]), (4, "error"))
 
+    def test_spawn_launches_a_secondary_that_can_reply(self) -> None:
+        parent = Path(self.tmp.name) / "spawned"
+        # Fake secondary: read the prompt file, find the channel dir in it, reply with the prompt's length.
+        fake = (
+            "import re,subprocess,sys,pathlib;"
+            "p=pathlib.Path(sys.argv[1]).read_text(encoding='utf-8');"
+            "d=re.search(r'recv (.+?) secondary', p).group(1);"
+            "subprocess.run([sys.executable, %r, 'send', d, 'secondary'], input=('prompt chars: %%d' %% len(p)).encode())"
+        ) % SCRIPT
+        template = f'"{sys.executable}" -c "{fake}" "{{prompt_file}}"'
+        code, result = run("spawn", str(parent), "--via", "command", "--command", template, "--session", "x",
+                           body="first task")
+        self.assertEqual((code, result["status"], result["file"]), (0, "spawned", "ch-p2s-000.json"))
+        d = result["dir"]
+        prompt = (Path(d) / ".secondary-prompt.txt").read_text(encoding="utf-8")
+        self.assertIn(d, prompt)
+        code, result = run("recv", d, "primary", "--block-seconds", "30")
+        self.assertEqual((code, result["status"]), (0, "message"))
+        self.assertEqual(result["body"], f"prompt chars: {len(prompt)}")
+        self.assertEqual(run("recv", d, "secondary", "--block-seconds", "0")[1]["status"], "waiting")
+
+    def test_spawn_rejects_bad_command_template(self) -> None:
+        code, result = run("spawn", str(Path(self.tmp.name) / "bad"), "--via", "command", "--command", "echo hi",
+                           "--session", "x", body="task")
+        self.assertEqual((code, result["status"]), (4, "error"))
+
     def test_selftest_is_silent_then_passes(self) -> None:
         began = time.monotonic()
         code, result = run("selftest", "--seconds", "2")

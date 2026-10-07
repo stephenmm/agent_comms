@@ -31,7 +31,10 @@ MUTANTS: dict[str, tuple[str, str]] = {
     "empty-channel timeout": ("if n else d.stat().st_mtime", "if n else started"),
     "recv waits for the peer": ("if n and author(n - 1) != role:", "if n:"),
     "owner kill switch": ("if (d / STOP).exists():", "if False:"),
-    "BOM stripped from body": ('raw.decode("utf-8-sig")', 'raw.decode("utf-8")'),
+    "spawn passes the start prompt": ('prompt_file.write_text(prompt, encoding="utf-8")',
+                                      'prompt_file.write_text("x" * 200, encoding="utf-8")'),
+    "spawn validates the template": ('if not template or "{prompt_file}" not in template:', "if False:"),
+    "BOM stripped from body": ('raw.decode("utf-8-sig").strip()  # utf-8-sig', 'raw.decode("utf-8").strip()  # utf-8-sig'),
 }
 
 

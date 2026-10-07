@@ -147,6 +147,26 @@ in the script name with plain semver: **chosen**. Two-part tags (`v1.0`): reject
 **Consequences.** `init` prints the script's own path, so start prompts pick up the new name
 automatically. Test module renamed to `test_agent_channel_lvl0.py`; `mutation_check.py` stays generic.
 
+## D11. `spawn` belongs to Level 0; Level 1 is reserved for measured initialization
+**Status:** Accepted, 2026-10-06 (Stephen's direction; reversed an earlier plan to make spawning Level 1)
+
+**Context.** Level 0 had one human step: pasting the secondary's start prompt. Agent CLIs can run headlessly
+(`codex exec`, `claude -p`), so the primary can launch the secondary itself. The question was which level
+owns that.
+
+**Decision.** `spawn <parent> --via codex|claude|command` is a Level 0 command in `agent_channel_lvl0.py`:
+init, first message, write `.secondary-prompt.txt`, launch the secondary detached with its output in
+`.secondary.log` (dot-files are not messages). Level 1 is reserved for a more rigorous initialization stage
+that measures each side's response speed. Adding a command is backwards compatible, so the next tag is a
+minor bump (`v1.1.0`), made once a spawned secondary completes a live round.
+
+**Options.** Spawn as a separate Level 1 script: rejected, the level axis is for protocol capability, not
+convenience. Spawn in Level 0: **chosen**.
+
+**Consequences.** Removes the only human step when a supported CLI is installed and signed in. Adds
+launcher knowledge (flags, binary locations) that will rot faster than the protocol; it is isolated in
+`launcher()` and `codex_exe()`.
+
 ## Open
 Nothing open for Level 0. Resolved on 2026-10-06: D9 confirmed; the done bar's non-Claude trial was
 met with OpenAI Codex (trial 5).

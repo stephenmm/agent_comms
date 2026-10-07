@@ -98,3 +98,17 @@ Stephen confirmed D9 (kill switch stays) and chose three-part tags with the leve
 references updated, historical ones left as written. Suite, `mypy --strict` and the guard-removal check
 re-run after the rename. Tagged `v1.0.0`. Level 0 is complete: every milestone in PLAN.md done, five live
 trials, no human relaying a message in any of them.
+
+## 2026-10-06 — `spawn` added to Level 0 (D11); trial 6 attempts
+Stephen asked whether a Codex session could be started remotely, then decided spawning belongs in Level 0,
+with Level 1 reserved for a measured initialization stage. `spawn <parent> --via codex|claude|command`
+added with a test that launches a fake secondary through `--via command` and two mutants (29 tests,
+17/17 guards). Live trial 6, four attempts, none yet complete:
+1. Codex: `--sandbox` and `--approve-for-me` are mutually exclusive in `codex exec`. Flag removed.
+2. Codex: the desktop app's bundled `codex.exe` routes its shell tool through `codex-code-mode-host.exe`,
+   which is not shipped; every command fails closed. Codex reported the block and exited.
+3. Codex with `--disable code_mode_host`: the router still refuses ("code-mode host is disabled").
+   Conclusion: headless Codex here needs the public CLI, not the app's bundled copy.
+4. Claude CLI (`claude -p`, Bash limited to Python, project dir readable): "OAuth session expired and could
+   not be refreshed". Needs one interactive `claude` login, then the trial is unchanged.
+In all four the spawn mechanics worked: process launched detached, prompt delivered, log captured.

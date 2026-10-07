@@ -4,10 +4,18 @@
 This file IS the protocol. Read it, then use only these commands (never write channel files by hand):
 
     init <parent-dir>           primary only: create the channel, print the secondary's start prompt
+    spawn <parent-dir> --via X  primary only: init + first message + launch the secondary yourself (no paste)
     selftest                    both: silent for 120 s, then prints "pass"
     send <dir> <role>           body from stdin or --body-file; --end closes the channel
     recv <dir> <role>           block until the peer's next message; prints it as JSON
     stop <dir>                  owner only: halt the channel; both agents get "closed" on their next command
+
+`spawn` removes the one human step: it runs init, sends your first message (stdin or --body-file), writes
+the start prompt to <dir>/.secondary-prompt.txt and launches the secondary as a detached process:
+    --via codex      codex exec, sandbox workspace-write, no approvals; output in <dir>/.secondary.log
+    --via claude     claude -p, headless; Bash limited to python, project dir readable (trial 6)
+    --via command --command '<shell template containing {prompt_file}>'   any other agent CLI
+After `spawn`, run `recv <dir> primary` exactly as after `send`. Dot-files in the channel are not messages.
 
 Every command prints one JSON object with a "status":
     "message" (exit 0)  the peer's message is in "body"; act on it, then `send`
@@ -32,6 +40,8 @@ import argparse
 import json
 import os
 import re
+import shutil
+import subprocess
 import sys
 import time
 from datetime import datetime
@@ -132,8 +142,8 @@ def state(d: Path, role: str) -> tuple[int, dict[str, Any], str]:
     return n, header, body
 
 
-def cmd_init(args: argparse.Namespace) -> NoReturn:
-    d = Path(args.parent).resolve() / f"{args.session}_agent_channel"
+def create_channel(parent: str, session: str) -> tuple[Path, str]:
+    d = Path(parent).resolve() / f"{session}_agent_channel"
     d.mkdir(parents=True)  # fails if it exists: every session uses a new channel
     script = Path(__file__).resolve()
     prompt = (
@@ -145,7 +155,58 @@ def cmd_init(args: argparse.Namespace) -> NoReturn:
         f"Paths are as the primary sees them; translate them if your view of the disk differs. "
         f"Run with python or python3, whichever your system provides."
     )
+    return d, prompt
+
+
+def cmd_init(args: argparse.Namespace) -> NoReturn:
+    d, prompt = create_channel(args.parent, args.session)
     out("created", OK, dir=str(d), secondary_start_prompt=prompt)
+
+
+def codex_exe() -> str:
+    """The Codex CLI: on PATH, or the copy the Codex desktop app keeps for itself."""
+    found = shutil.which("codex") or shutil.which("codex.exe")
+    bundled = Path.home() / ".codex" / ".sandbox-bin" / "codex.exe"
+    if found:
+        return found
+    if bundled.exists():
+        return str(bundled)
+    out("error", ERROR, body="codex CLI not found on PATH or in ~/.codex/.sandbox-bin")
+
+
+def launcher(via: str, template: str | None, d: Path, prompt_file: Path) -> tuple[list[str] | str, bool]:
+    """The secondary's command line and whether it needs a shell. The prompt is passed as text or by file."""
+    prompt = prompt_file.read_text(encoding="utf-8")
+    if via == "codex":
+        # --disable code_mode_host: the desktop app's bundled CLI lacks that host executable, and with it
+        # enabled the shell tool fails closed and the agent can run nothing (trial 6, attempt 2).
+        return [codex_exe(), "exec", "-C", str(d), "--skip-git-repo-check", "--sandbox", "workspace-write",
+                "--disable", "code_mode_host", "-o", str(d / ".secondary-last.txt"), prompt], False
+    if via == "claude":
+        claude = shutil.which("claude") or out("error", ERROR, body="claude CLI not found on PATH")
+        # Headless: only Python may run, and the project directory holding this script is readable.
+        return [claude, "-p", prompt, "--add-dir", str(Path(__file__).resolve().parent),
+                "--allowedTools", "Read", "Bash(python:*)", "Bash(python3:*)", "Bash(py:*)"], False
+    if not template or "{prompt_file}" not in template:
+        out("error", ERROR, body="--via command needs --command with a {prompt_file} placeholder")
+    return template.replace("{prompt_file}", str(prompt_file)), True
+
+
+def cmd_spawn(args: argparse.Namespace) -> NoReturn:
+    raw = Path(args.body_file).read_bytes() if args.body_file else sys.stdin.buffer.read()
+    body = raw.decode("utf-8-sig").strip()
+    if not body:
+        out("error", ERROR, body="empty first message")
+    d, prompt = create_channel(args.parent, args.session)
+    write(d / name(0), {"max_wait_minutes": args.max_wait_minutes}, body)
+    prompt_file = d / ".secondary-prompt.txt"
+    prompt_file.write_text(prompt, encoding="utf-8")
+    cmd, use_shell = launcher(args.via, args.command, d, prompt_file)
+    log = open(d / ".secondary.log", "ab")  # noqa: SIM115  # the child process owns this handle
+    flags = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0) | getattr(subprocess, "DETACHED_PROCESS", 0)
+    proc = subprocess.Popen(cmd, shell=use_shell, stdin=subprocess.DEVNULL, stdout=log, stderr=log,
+                            cwd=str(d), creationflags=flags, start_new_session=(flags == 0))
+    out("spawned", OK, dir=str(d), file=name(0), via=args.via, pid=proc.pid, log=str(d / ".secondary.log"))
 
 
 def cmd_selftest(args: argparse.Namespace) -> NoReturn:
@@ -212,6 +273,15 @@ def main() -> NoReturn:
     p.add_argument("parent")
     p.add_argument("--session", default=datetime.now().strftime("%Y%m%dT%H%M%S"))
     p.set_defaults(func=cmd_init)
+
+    p = sub.add_parser("spawn")
+    p.add_argument("parent")
+    p.add_argument("--via", choices=("codex", "claude", "command"), required=True)
+    p.add_argument("--command", help="for --via command: shell template containing {prompt_file}")
+    p.add_argument("--session", default=datetime.now().strftime("%Y%m%dT%H%M%S"))
+    p.add_argument("--body-file")
+    p.add_argument("--max-wait-minutes", type=float, default=DEFAULT_MAX_WAIT_MINUTES)
+    p.set_defaults(func=cmd_spawn)
 
     p = sub.add_parser("selftest")
     p.add_argument("--seconds", type=float, default=120.0)

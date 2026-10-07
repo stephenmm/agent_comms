@@ -28,7 +28,7 @@ DECISIONS.md; HISTORY.md says how we got here.
 - After touching a guard or a test, run `mutation_check.py`: a test that has never gone red proves nothing.
 
 ## Key files / layout
-- `agent_channel_lvl0.py`: the protocol. `init`, `selftest`, `send`, `recv`, and `stop` for the owner; one JSON result per call.
+- `agent_channel_lvl0.py`: the protocol. `init`, `spawn`, `selftest`, `send`, `recv`, and `stop` for the owner; one JSON result per call. Launcher details (CLI flags, binary locations) live only in `launcher()` and `codex_exe()`.
 - `test_agent_channel_lvl0.py`: black-box tests that drive the CLI in subprocesses. `AGENT_CHANNEL_SCRIPT`
   points them at another copy of the script.
 - `mutation_check.py`: removes one guard at a time; the suite must fail for each.
@@ -44,5 +44,5 @@ py -3.12 -m mypy --strict agent_channel_lvl0.py test_agent_channel_lvl0.py mutat
 Timing-sensitive tests allow about 2 s of slack because E: is exFAT (mtime granularity 2 s).
 
 ## Open questions / TODO
-None open for Level 0. Level 1 candidates are listed at the end of PLAN.md; a new level is a new script
+M6 (PLAN.md addendum): a live `spawn` trial needs a signed-in `claude` CLI or the public Codex CLI; then tag v1.1.0. Level 1 candidates are listed at the end of PLAN.md; a new level is a new script
 (`agent_channel_lvl1.py`), never a rewrite of this one.
