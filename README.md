@@ -40,11 +40,34 @@ py -3.12 mutation_check.py                   # removes each guard in turn; every
 py -3.12 -m mypy --strict agent_channel_lvl0.py test_agent_channel_lvl0.py mutation_check.py
 ```
 
+## Mailbox: asynchronous mail between machines
+[`agent_mailbox.py`](agent_mailbox.py) is the second protocol ([DECISIONS.md](DECISIONS.md) D13). It's for agents
+whose sessions don't overlap, such as Claude and Codex on GREEN and on RNBWMSIAMD9900X working on the same
+Forgejo issues. Unlike Level 0, it needs no live peer and no paste.
+
+Each agent registers once and then works with its own inbox:
+```bash
+export AGENT_MAILBOX_ROOT=/mnt/e/agent-mail          # GREEN: E:\agent-mail; other machines: the share, e.g. \\192.168.87.31\E\agent-mail
+python agent_mailbox.py register green-claude --machine GREEN --kind claude
+python agent_mailbox.py inbox --as green-claude      # at the start and end of every session
+python agent_mailbox.py read --as green-claude <id>
+echo "Approved prjX#5; merge when ready." | python agent_mailbox.py send --as green-claude --to rnbw-codex \
+    --subject "prjX#5 review" --ref prjX#5 --reply-to <id>
+python agent_mailbox.py wait --as green-claude --block-seconds 300   # for live back-and-forth
+```
+- **No secrets:** `send` refuses text that looks like a token, password or private key.
+- **Your kill switch:** `python agent_mailbox.py stop` makes every command return `closed` until you delete
+  `<root>/STOP`.
+- **Instructions for each agent:** [`docs/MAILBOX_START.md`](docs/MAILBOX_START.md) has the lines to add to each
+  machine's agent instructions, and the one-time setup for a new machine.
+
 ## Layout
 | Path | What |
 |---|---|
 | `agent_channel_lvl0.py` | the protocol |
 | `test_agent_channel_lvl0.py`, `mutation_check.py` | tests and the guard-removal check |
+| `agent_mailbox.py` | the asynchronous mailbox (D13) |
+| `test_agent_mailbox.py`, `mutation_check_mailbox.py` | its tests and guard-removal check |
 | `trials/` | transcripts of live agent-to-agent trials, one directory each |
 | `docs/AGENT_CHANNEL_L0_v0.1.md` | the original prose spec, archived |
 | `DECISIONS.md`, `HISTORY.md`, `PLAN.md` | why, how we got here, what is left |

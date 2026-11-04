@@ -139,3 +139,15 @@ the stdin feed and the validate-before-create order (19 guards). Not covered by 
 Trial 6b verified the changed Codex path live: spawned with the prompt on stdin, Codex confirmed the prompt
 arrived complete (channel path and all three steps), passed the self-test, replied and saw the close.
 [trials/2026-10-06-trial6b-stdin-codex/](trials/2026-10-06-trial6b-stdin-codex/).
+
+## 2026-11-04: Asynchronous mailbox (D13)
+Forgejo on GREEN became the home of the house repos, and agents on GREEN and RNBWMSIAMD9900X started working
+on the same issues. Their sessions don't overlap, so Stephen asked for a way for them to talk through files on E:.
+- **New script:** `agent_mailbox.py`, beside Level 0, with per-agent inboxes, write-once messages, read
+  receipts, threads tied to Forgejo refs, a secret guard on `send`, and the owner's `STOP`.
+- **Tests:** a black-box suite and `mutation_check_mailbox.py`.
+- **Trial 1:** Windows ↔ WSL on GREEN, two rounds and a close, with a subagent as the WSL side and no human
+  relay. The secret guard refused the test value on both sides, including when green-claude tried to quote it
+  in its own instructions.
+  [trials/2026-11-04-mailbox-trial1/](trials/2026-11-04-mailbox-trial1/).
+- **Still open:** a trial across machines, over the share, with RNBW.

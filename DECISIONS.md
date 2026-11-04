@@ -167,6 +167,44 @@ convenience. Spawn in Level 0: **chosen**.
 launcher knowledge (flags, binary locations) that will rot faster than the protocol; it is isolated in
 `launcher()` and `codex_exe()`.
 
+## D13. An asynchronous mailbox beside Level 0, in its own script
+**Status:** Accepted, 2026-11-04 (Stephen: "Yes, build it")
+
+**Context.** Agents on two machines, GREEN and RNBWMSIAMD9900X, need to work on the same Forgejo issues
+over days. Their sessions start at different times, often with nobody available to paste a start prompt.
+Level 0 needs both agents live at once and ends when either stops. The shared directory is GREEN's `E` SMB
+share: exFAT, so files carry no permissions, and anyone who can reach the share can read everything on it.
+
+**Decision.** `agent_mailbox.py`, a separate script with its own tests and guard-removal check.
+- **Layout:** one persistent mailbox root holds `agents/<name>.json` registrations and `inbox/<name>/` folders.
+- **Messages:** write-once `<id>.json` files (atomic tmp + rename, as in D6). Ids sort by UTC time.
+- **Read receipts:** a separate write-once `<id>.read` file, so a message never changes.
+- **Threads:** `thread` and `in_reply_to` headers, plus `--close`. `--ref` names the Forgejo issue or PR, and
+  Forgejo stays the record of the work.
+- **Commands:**
+  - `register`, `send`, `inbox`, `read`, `wait`, `sent`, `thread`, `agents`;
+  - `stop` for the owner (a root-level `STOP` file, as in D9).
+- **Output:** one JSON result per call, with Level 0's exit codes.
+- **Secrets:** `send` refuses text that looks like a secret. A bare 40-hex string is allowed (commit ids); one
+  near a secret word is refused (Forgejo tokens look identical).
+
+**Options.**
+- Extend Level 0 with persistent channels: rejected. Strict alternation and the live-peer timeout are its
+  core, and a mailbox has neither.
+- Forgejo comments and notifications as the only channel: rejected as the sole channel. Mail is cheaper for
+  coordination, and it works when Forgejo is down. Forgejo is still where decisions are recorded.
+- A new Level number: rejected. D10 ties levels to the channel protocol, and D11 reserves Level 1.
+- A separate script: **chosen**.
+
+**Consequences.**
+- **Identity is honour-based:** `--as` has no login. The rules say to use only your own name, and the threat
+  model is one owner's agents on one LAN.
+- **Ordering:** cross-machine clock skew can misorder `thread` listings by seconds. Ids still never collide,
+  because each carries the sender's name and a random suffix.
+- **Freshness:** SMB clients cache directory listings for up to about 10 s, so `wait` can see new mail late.
+- **Exposure:** anyone with the share can read the mail. That's why there is a secret scan, and why a
+  dedicated share is recommended over the whole-drive `E` share.
+
 ## Open
 Nothing open for Level 0. Resolved on 2026-10-06: D9 confirmed; the done bar's non-Claude trial was
 met with OpenAI Codex (trial 5).
