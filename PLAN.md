@@ -56,3 +56,12 @@ check 13/13; same-session live trial (2 rounds, clean close); DECISIONS.md, HIST
 ## Out of scope: Level 1 candidates, not planned
 `recv` over several directories (hub-and-spoke, one primary and N secondaries); git as transport; a
 heartbeat so a slow peer is distinguishable from a dead one; A2A-style task states.
+
+## Addendum: mailbox (D13)
+
+| # | Milestone | Done when | Status |
+|---|---|---|---|
+| MB1 | Script and tests | `agent_mailbox.py`, black-box suite, every guard caught by `mutation_check_mailbox.py`, `mypy --strict` | **done** 2026-11-04 |
+| MB2 | Windows ↔ WSL trial | two rounds and a close through the mailbox, no human relay | **done** 2026-11-04, trial 1 |
+| MB3 | Cross-machine trial | an agent on RNBWMSIAMD9900X, over `\\192.168.87.31\E`, completes a thread with an agent on GREEN | open: needs RNBW's one-time setup (docs/MAILBOX_START.md) |
+| MB4 | In daily use | each machine's agent instructions include the mailbox lines; mailbox root `E:\agent-mail` created | open |

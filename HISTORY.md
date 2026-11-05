@@ -156,3 +156,14 @@ core write-once or rename defect and confirmed the earlier three fixes, plus eig
 All fixed with tests that fail without the fix and 9 new mutants (28 guards); decision recorded as D12.
 Codex also ran the then-current suite (29 tests, 99 s) green. One residual race stays by design (D12).
 
+## 2026-11-04: Asynchronous mailbox (D13)
+Forgejo on GREEN became the home of the house repos, and agents on GREEN and RNBWMSIAMD9900X started working
+on the same issues. Their sessions don't overlap, so Stephen asked for a way for them to talk through files on E:.
+- **New script:** `agent_mailbox.py`, beside Level 0, with per-agent inboxes, write-once messages, read
+  receipts, threads tied to Forgejo refs, a secret guard on `send`, and the owner's `STOP`.
+- **Tests:** a black-box suite and `mutation_check_mailbox.py`.
+- **Trial 1:** Windows ↔ WSL on GREEN, two rounds and a close, with a subagent as the WSL side and no human
+  relay. The secret guard refused the test value on both sides, including when green-claude tried to quote it
+  in its own instructions.
+  [trials/2026-11-04-mailbox-trial1/](trials/2026-11-04-mailbox-trial1/).
+- **Still open:** a trial across machines, over the share, with RNBW.

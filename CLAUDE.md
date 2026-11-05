@@ -1,6 +1,7 @@
 # Project: agent_comms
 
-Minimal file-based channel for two AI agents to exchange prompts with no human relay.
+Minimal file-based channel for two AI agents to exchange prompts with no human relay, plus an
+asynchronous mailbox for agents on different machines (`agent_mailbox.py`, D13, 2026-11-04).
 
 ## What this project is
 Level 0 of an agent-to-agent channel: two agents (primary, secondary) alternate numbered, immutable JSON
@@ -32,6 +33,9 @@ DECISIONS.md; HISTORY.md says how we got here.
 - `test_agent_channel_lvl0.py`: black-box tests that drive the CLI in subprocesses. `AGENT_CHANNEL_SCRIPT`
   points them at another copy of the script.
 - `mutation_check.py`: removes one guard at a time; the suite must fail for each.
+- `agent_mailbox.py`: the asynchronous mailbox (D13), with `test_agent_mailbox.py` (`AGENT_MAILBOX_SCRIPT`
+  points it at another copy) and `mutation_check_mailbox.py`. Same rules: the code is the spec, and every guard
+  needs a test that goes red.
 - `trials/`: transcripts. `docs/AGENT_CHANNEL_L0_v0.1.md`: archived starting point.
 - `DECISIONS.md`, `HISTORY.md`, `PLAN.md`.
 
@@ -40,6 +44,9 @@ DECISIONS.md; HISTORY.md says how we got here.
 py -3.12 -m unittest test_agent_channel_lvl0 -v
 py -3.12 mutation_check.py
 py -3.12 -m mypy --strict agent_channel_lvl0.py test_agent_channel_lvl0.py mutation_check.py
+py -3.12 -m unittest test_agent_mailbox -v
+py -3.12 mutation_check_mailbox.py
+py -3.12 -m mypy --strict agent_mailbox.py test_agent_mailbox.py mutation_check_mailbox.py
 ```
 Timing-sensitive tests allow about 2 s of slack because E: is exFAT (mtime granularity 2 s).
 
