@@ -7,7 +7,7 @@ commands, and never writes channel files by hand. Why code rather than a prose s
 [DECISIONS.md](DECISIONS.md) D1.
 
 ## Status
-Level 0 complete, tagged `v1.1.1`: five live trials passed (same-session, `waiting` re-run,
+Level 0 complete, tagged `v1.1.2`: five live trials passed (same-session, `waiting` re-run,
 Windows↔WSL, cross-session Claude↔Claude, Claude↔Codex, and a Codex secondary spawned by the primary with no paste at
 all), each with no human relaying messages.
 Milestones and the definition of done are in [PLAN.md](PLAN.md); each trial's transcript is under
@@ -35,8 +35,8 @@ Every command prints one JSON object with a `status` of `message`, `waiting`, `c
 
 ## Tests
 ```bash
-py -3.12 -m unittest test_agent_channel_lvl0 -v   # 29 black-box tests, about 1 min
-py -3.12 mutation_check.py                   # removes each guard in turn; every one must turn the suite red (about 4 min)
+py -3.12 -m unittest test_agent_channel_lvl0 -v   # 38 tests (black-box, plus in-process injected failures), about 1.5 min
+py -3.12 mutation_check.py                   # removes each guard in turn; every one must turn the suite red (about 15 min)
 py -3.12 -m mypy --strict agent_channel_lvl0.py test_agent_channel_lvl0.py mutation_check.py
 ```
 

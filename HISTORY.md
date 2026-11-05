@@ -139,3 +139,20 @@ the stdin feed and the validate-before-create order (19 guards). Not covered by 
 Trial 6b verified the changed Codex path live: spawned with the prompt on stdin, Codex confirmed the prompt
 arrived complete (channel path and all three steps), passed the self-test, replied and saw the close.
 [trials/2026-10-06-trial6b-stdin-codex/](trials/2026-10-06-trial6b-stdin-codex/).
+
+## 2026-10-07 — Second Codex review; eight findings fixed (v1.1.2)
+Stephen had Codex review the whole script, tests and mutation check at v1.1.1, through `spawn --via codex`
+(the channel is kept in [trials/2026-10-07-review2-codex/](trials/2026-10-07-review2-codex/)). Codex found no
+core write-once or rename defect and confirmed the earlier three fixes, plus eight new ones, each reproduced:
+1. `send` that was already blocked on stdin published after a TIMEOUT or `stop` and reported `sent`.
+2. `spawn` failures after message 0 (prompt file, log file) left a live channel and no secondary.
+3. A failed prompt write left the started child running.
+4. `codex_exe` looked at the first PATH hit only, then fell back to the unusable sandbox copy.
+5. The concurrency test fed its senders one after another, so it never overlapped writes.
+6. Expected failures (duplicate `init`, unreadable `--body-file`, unreadable first message in `recv`) gave
+   tracebacks instead of JSON.
+7. The whole-prompt test compared length, so a same-length corruption passed. It compares a SHA-256 now.
+8. The selftest silence test could not see early output. It reads stdout while the selftest sleeps.
+All fixed with tests that fail without the fix and 9 new mutants (28 guards); decision recorded as D12.
+Codex also ran the then-current suite (29 tests, 99 s) green. One residual race stays by design (D12).
+

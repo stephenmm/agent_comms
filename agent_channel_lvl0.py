@@ -47,7 +47,7 @@ import sys
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Any, NoReturn
+from typing import Any, BinaryIO, NoReturn
 
 MSG = re.compile(r"ch-(p2s|s2p)-\d{3}\.json")  # anything else in the directory is ignored
 ROLES = ("primary", "secondary")
@@ -143,9 +143,21 @@ def state(d: Path, role: str) -> tuple[int, dict[str, Any], str]:
     return n, header, body
 
 
+def read_body(body_file: str | None) -> str:
+    """The message body from --body-file or stdin. utf-8-sig drops the BOM that PowerShell 5.1 adds."""
+    try:
+        raw = Path(body_file).read_bytes() if body_file else sys.stdin.buffer.read()
+    except OSError as exc:
+        out("error", ERROR, body=f"cannot read the body: {exc}")
+    return raw.decode("utf-8-sig").strip()
+
+
 def create_channel(parent: str, session: str) -> tuple[Path, str]:
     d = Path(parent).resolve() / f"{session}_agent_channel"
-    d.mkdir(parents=True)  # fails if it exists: every session uses a new channel
+    try:
+        d.mkdir(parents=True)  # fails if it exists: every session uses a new channel
+    except OSError as exc:  # FileExistsError included
+        out("error", ERROR, body=f"cannot create the channel {d}: {exc}")
     script = Path(__file__).resolve()
     prompt = (
         f"You are the SECONDARY of an agent channel. Read {script} (the code is the protocol), then:\n"
@@ -167,19 +179,29 @@ def cmd_init(args: argparse.Namespace) -> NoReturn:
 SANDBOX_CODEX = Path.home() / ".codex" / ".sandbox-bin" / "codex.exe"
 
 
+def on_path(*names: str) -> list[str]:
+    """Every executable called one of `names` on PATH, in PATH order (shutil.which stops at the first)."""
+    hits: list[str] = []
+    for folder in os.environ.get("PATH", "").split(os.pathsep):
+        for exe in names:
+            hit = shutil.which(exe, path=folder) if folder else None
+            if hit and hit not in hits:
+                hits.append(hit)
+    return hits
+
+
 def codex_exe() -> str:
-    """The Codex CLI: on PATH, else the desktop app's full install (binary plus its code-mode host), else
-    the app's sandbox copy, which lacks the host and cannot run shell commands headlessly (trial 6)."""
-    found = shutil.which("codex") or shutil.which("codex.exe")
-    if found and Path(found).resolve() != SANDBOX_CODEX.resolve():  # PATH may point at the incomplete copy
-        return found
+    """The Codex CLI: on PATH, else the desktop app's full install (binary plus its code-mode host). The app's
+    sandbox copy lacks the host and cannot run shell commands headlessly (trial 6), so it is never chosen."""
+    for found in on_path("codex", "codex.exe"):  # every PATH hit, not just the first: it may be the sandbox copy
+        if Path(found).resolve() != SANDBOX_CODEX.resolve():
+            return found
     local = Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local"))
     for exe in sorted(local.glob("OpenAI/Codex/bin/*/codex.exe"), key=lambda e: e.stat().st_mtime, reverse=True):
         if (exe.parent / "codex-code-mode-host.exe").exists():
             return str(exe)
-    if SANDBOX_CODEX.exists():
-        return str(SANDBOX_CODEX)
-    out("error", ERROR, body="codex CLI not found on PATH, under %LOCALAPPDATA%/OpenAI/Codex/bin, or in ~/.codex/.sandbox-bin")
+    out("error", ERROR, body="no usable codex CLI: none on PATH or under %LOCALAPPDATA%/OpenAI/Codex/bin "
+                             "(the sandbox copy in ~/.codex/.sandbox-bin cannot run shell commands headlessly)")
 
 
 def launcher(via: str, template: str | None, d: Path, prompt_file: Path) -> tuple[list[str] | str, bool]:
@@ -199,9 +221,19 @@ def launcher(via: str, template: str | None, d: Path, prompt_file: Path) -> tupl
     return template.replace("{prompt_file}", str(prompt_file)), True
 
 
+def kill_tree(proc: subprocess.Popen[bytes]) -> None:
+    """Best-effort: stop a child we started and cannot use (with its descendants where the OS lets us)."""
+    if os.name == "nt":  # kill() ends only cmd.exe when shell=True; /T takes the tree
+        subprocess.run(["taskkill", "/F", "/T", "/PID", str(proc.pid)], capture_output=True, check=False)
+    try:
+        proc.kill()
+        proc.wait(timeout=10)
+    except (OSError, subprocess.TimeoutExpired):
+        pass
+
+
 def cmd_spawn(args: argparse.Namespace) -> NoReturn:
-    raw = Path(args.body_file).read_bytes() if args.body_file else sys.stdin.buffer.read()
-    body = raw.decode("utf-8-sig").strip()
+    body = read_body(args.body_file)
     if not body:
         out("error", ERROR, body="empty first message")
     d = Path(args.parent).resolve() / f"{args.session}_agent_channel"
@@ -209,12 +241,14 @@ def cmd_spawn(args: argparse.Namespace) -> NoReturn:
     cmd, use_shell = launcher(args.via, args.command, d, prompt_file)  # validate before anything is created
     d, prompt = create_channel(args.parent, args.session)
     write(d / name(0), {"max_wait_minutes": args.max_wait_minutes}, body)
-    prompt_file.write_text(prompt, encoding="utf-8")
-    log = open(d / ".secondary.log", "ab")  # noqa: SIM115  # the child process owns this handle
-    # New process group only: it outlives this process and ignores its Ctrl-C. Not DETACHED_PROCESS, which
-    # together with shell=True leaves the child unable to read its stdin (it hangs; see stdin_matrix probe).
-    flags = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
-    try:
+    log: BinaryIO | None = None
+    proc: subprocess.Popen[bytes] | None = None
+    try:  # everything after message 0 leaves a channel with no secondary until it succeeds: fail into a terminal state
+        prompt_file.write_text(prompt, encoding="utf-8")
+        log = open(d / ".secondary.log", "ab")
+        # New process group only: it outlives this process and ignores its Ctrl-C. Not DETACHED_PROCESS, which
+        # together with shell=True leaves the child unable to read its stdin (it hangs; see stdin_matrix probe).
+        flags = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
         proc = subprocess.Popen(cmd, shell=use_shell, stdin=subprocess.PIPE, stdout=log, stderr=log,
                                 cwd=str(d), creationflags=flags, start_new_session=(flags == 0))
         # A pipe, not an inherited file handle: a detached child behind cmd.exe never sees EOF on the latter.
@@ -222,7 +256,17 @@ def cmd_spawn(args: argparse.Namespace) -> NoReturn:
         proc.stdin.write(prompt.encode("utf-8"))
         proc.stdin.close()
     except OSError as exc:
-        close(d, "primary", f"ERROR: could not start the secondary: {exc}")  # terminal state, not a stuck channel
+        if proc is not None:
+            kill_tree(proc)  # started but never given its prompt: do not leave it running
+        reason = f"ERROR: could not start the secondary: {exc}"
+        try:
+            close(d, "primary", reason)  # terminal state, not a stuck channel
+        except OSError:  # the abort file itself cannot be written; still report it
+            out("closed", CLOSED, by="primary", body=reason)
+    finally:
+        if log is not None:
+            log.close()  # the child has its own copy of the handle
+    assert proc is not None
     out("spawned", OK, dir=str(d), file=name(0), via=args.via, pid=proc.pid, log=str(d / ".secondary.log"))
 
 
@@ -233,6 +277,7 @@ def cmd_selftest(args: argparse.Namespace) -> NoReturn:
 
 def cmd_send(args: argparse.Namespace) -> NoReturn:
     d, role = Path(args.dir), args.role
+    body = read_body(args.body_file)  # first: stdin may block for a long time, and the channel can close meanwhile
     n, last_header, last_body = state(d, role)
     if last_header.get("end", False):
         out("closed", CLOSED, by=author(n - 1), body=last_body)
@@ -240,8 +285,6 @@ def cmd_send(args: argparse.Namespace) -> NoReturn:
         out("error", ERROR, body=f"not your turn: {name(n)} belongs to the {author(n)}; run recv")
     if n >= MAX_MESSAGES:
         close(d, role, "ERROR: message numbers exhausted")
-    raw = Path(args.body_file).read_bytes() if args.body_file else sys.stdin.buffer.read()
-    body = raw.decode("utf-8-sig").strip()  # utf-8-sig drops the BOM that PowerShell 5.1 adds
     if not body and not args.end:
         out("error", ERROR, body="empty body")
     header: dict[str, Any] = {"end": True} if args.end else {}
@@ -265,7 +308,10 @@ def cmd_recv(args: argparse.Namespace) -> NoReturn:
         waiting_since = (d / name(n - 1)).stat().st_mtime if n else d.stat().st_mtime
         max_wait = DEFAULT_MAX_WAIT_MINUTES
         if n:
-            first = load(d / name(0))[0].get("max_wait_minutes", max_wait)
+            try:
+                first = load(d / name(0))[0].get("max_wait_minutes", max_wait)
+            except ValueError as exc:
+                close(d, role, f"ERROR: {exc}")
             max_wait = float(first) if isinstance(first, (int, float)) else max_wait
         if time.time() - waiting_since > max_wait * 60:
             close(d, role, f"TIMEOUT: no {name(n)} within {max_wait:g} minutes")

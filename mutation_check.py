@@ -37,7 +37,24 @@ MUTANTS: dict[str, tuple[str, str]] = {
     "spawn feeds the prompt on stdin": ('proc.stdin.write(prompt.encode("utf-8"))', "pass"),
     "spawn validates before creating": ("    cmd, use_shell = launcher(args.via, args.command, d, prompt_file)  # validate before anything is created\n    d, prompt = create_channel(args.parent, args.session)\n",
                                         "    d, prompt = create_channel(args.parent, args.session)\n    cmd, use_shell = launcher(args.via, args.command, d, prompt_file)\n"),
-    "BOM stripped from body": ('raw.decode("utf-8-sig").strip()  # utf-8-sig', 'raw.decode("utf-8").strip()  # utf-8-sig'),
+    "spawn feeds the prompt intact": ('proc.stdin.write(prompt.encode("utf-8"))',
+                                      'proc.stdin.write(prompt.replace("selftest", "XXXXXXXX").encode("utf-8"))'),
+    "spawn handles failures after message 0": ("    except OSError as exc:\n        if proc is not None:",
+                                               "    except FileExistsError as exc:\n        if proc is not None:"),
+    "spawn stops a child that got no prompt": ("kill_tree(proc)  # started", "pass  # started"),
+    "send reads the body before the channel state": (
+        "    body = read_body(args.body_file)  # first: stdin may block for a long time, and the channel can close meanwhile\n"
+        "    n, last_header, last_body = state(d, role)\n",
+        "    n, last_header, last_body = state(d, role)\n    body = read_body(args.body_file)\n"),
+    "codex_exe skips the sandbox copy": ("if Path(found).resolve() != SANDBOX_CODEX.resolve():", "if True:"),
+    "selftest prints nothing early": ("time.sleep(args.seconds)", 'print("early", flush=True); time.sleep(args.seconds)'),
+    "init reports an existing channel as JSON": ("    except OSError as exc:  # FileExistsError included",
+                                                 "    except PermissionError as exc:  # FileExistsError included"),
+    "unreadable body is a JSON error": ("    except OSError as exc:\n        out(\"error\", ERROR, body=f\"cannot read the body",
+                                        "    except PermissionError as exc:\n        out(\"error\", ERROR, body=f\"cannot read the body"),
+    "recv closes on an unreadable first message": ("            except ValueError as exc:\n                close(d, role",
+                                                   "            except KeyError as exc:\n                close(d, role"),
+    "BOM stripped from body": ('return raw.decode("utf-8-sig").strip()', 'return raw.decode("utf-8").strip()'),
 }
 
 

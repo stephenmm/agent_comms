@@ -167,6 +167,32 @@ convenience. Spawn in Level 0: **chosen**.
 launcher knowledge (flags, binary locations) that will rot faster than the protocol; it is isolated in
 `launcher()` and `codex_exe()`.
 
+## D12. A closed channel wins over a send that was already waiting; failures end in a terminal state
+**Status:** Accepted, 2026-10-07 (second Codex review of `spawn`; eight findings, all fixed in `v1.1.2`)
+
+**Context.** The review showed three places where the code promised more than it enforced: `send` read the
+channel state *before* blocking on stdin, so a reply typed after a TIMEOUT or `stop` was still published and
+reported `sent`; `spawn` left a live channel with no secondary when anything after message 0 failed (prompt
+file, log file, process start, prompt delivery) and left a started child running when delivery failed; and
+`codex_exe()` examined only the first PATH hit, then fell back to the sandbox copy it knew was unusable.
+
+**Decision.** (1) `send` reads its body first, then the state. A check just before publishing is still a
+race (the owner can `stop` between the check and the rename), but that window is microseconds instead of the
+agent's whole thinking time; a lock was not added. (2) Everything `spawn` does after message 0 is inside one
+`OSError` handler that kills the child tree if one was started and writes the primary's abort file. (3)
+`codex_exe()` walks every PATH hit, never returns the sandbox copy, and reports an error when nothing
+usable exists. (4) Expected input/filesystem failures (existing channel, unreadable `--body-file`, unreadable
+first message in `recv`) are JSON results, as the docstring says.
+
+**Options.** A common close/publication lock: rejected, a second lock file for a microsecond window in a
+single-writer-per-role design. Re-check state after reading only: rejected as equivalent but easier to get
+wrong than reading first. Keeping the sandbox copy as a last resort: rejected, a run that cannot execute
+shell commands looks like a hung secondary, not an error.
+
+**Consequences.** The remaining publish race is documented here, not closed. `send` now reads stdin before
+reporting a wrong-turn error, so a misused call consumes its input first. Failure paths that an OS will not
+produce on demand are tested in-process with injected failures (`SpawnFailureTest`).
+
 ## Open
 Nothing open for Level 0. Resolved on 2026-10-06: D9 confirmed; the done bar's non-Claude trial was
 met with OpenAI Codex (trial 5).
